@@ -1,0 +1,70 @@
+#!/bin/bash
+
+######################################################################
+# About: Script to track users with access to a GitHub repo
+# Organization: devops-practice-session
+# Hardcoded Username: medisettiyaswanth
+# Inputs: Requires 'token' env variable exported.
+# Arguments: Repository_Name
+# Author: yaswanth
+######################################################################
+
+# GitHub API baseline URL
+API_URL="https://github.com"
+
+# Hardcoded GitHub Username
+USERNAME="medisettiyaswanth"
+# User token assigned from your exported terminal variable
+TOKEN=$token
+
+# Fixed Organization Name
+REPO_OWNER="devops-practice-session"
+# Command line argument for the repository name
+REPO_NAME=$1
+
+# Helper Function: Validates that you passed the repository name
+function helper {
+    local expected_args=1
+    if [ $# -ne $expected_args ]; then
+        echo "Error: Missing repository name argument."
+        echo "Usage: ./aws_resource_tracker <repository-name>"
+        exit 1
+    fi
+}
+
+# GET Request execution function
+function github_api_get {
+    local endpoint=$1
+    local url="${API_URL}/${endpoint}"
+
+    # Execute curl request with Token authentication
+    curl -s -u "${USERNAME}:${TOKEN}" "$url"
+}
+
+# Core function to process and print user access list
+function list_users_with_access {
+    local endpoint="repos/${REPO_OWNER}/${REPO_NAME}/collaborators"
+
+    echo "Fetching collaborators for organization '${REPO_OWNER}' on repository '${REPO_NAME}'..."
+    
+    # Run API request and parse the JSON response using jq filtering
+    collaborators=$(github_api_get "$endpoint" | jq -r '.[] | select(.permissions.pull == true) | .login')
+
+    # Validate output results
+    if [ -z "$collaborators" ]; then
+        echo "No users found, or you do not have permission to view this repository's settings."
+    else
+        echo "The following users have access to the repository:"
+        echo "$collaborators"
+    fi
+}
+
+# ---- Script Execution Flow ----
+# 1. Pass arguments into helper function to validate inputs
+helper "$@"
+
+# 2. Trigger the primary tracking operation
+list_users_with_access
+nano aws_resource_tracker
+
+
